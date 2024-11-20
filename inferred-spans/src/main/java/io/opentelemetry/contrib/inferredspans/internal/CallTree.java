@@ -17,6 +17,7 @@ import io.opentelemetry.api.trace.SpanBuilder;
 import io.opentelemetry.api.trace.SpanContext;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Context;
+import io.opentelemetry.contrib.inferredspans.ParentOverrideHandler;
 import io.opentelemetry.contrib.inferredspans.internal.pooling.ObjectPool;
 import io.opentelemetry.contrib.inferredspans.internal.pooling.Recyclable;
 import io.opentelemetry.contrib.inferredspans.internal.util.HexUtils;
@@ -25,7 +26,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.function.BiConsumer;
 import java.util.logging.Logger;
 import javax.annotation.Nullable;
 import org.agrona.collections.LongHashSet;
@@ -54,7 +54,7 @@ public class CallTree implements Recyclable {
   public static final Attributes CHILD_LINK_ATTRIBUTES =
       Attributes.builder().put(LINK_IS_CHILD, true).build();
 
-  public static final BiConsumer<SpanBuilder, SpanContext> DEFAULT_PARENT_OVERRIDE =
+  public static final ParentOverrideHandler DEFAULT_PARENT_OVERRIDE =
       (inferredSpan, child) -> inferredSpan.addLink(child, CHILD_LINK_ATTRIBUTES);
 
   @Nullable private CallTree parent;
@@ -431,7 +431,7 @@ public class CallTree implements Recyclable {
       @Nullable Span parentSpan,
       TraceContext parentContext,
       SpanAnchoredClock clock,
-      BiConsumer<SpanBuilder, SpanContext> spanParentOverride,
+      ParentOverrideHandler spanParentOverride,
       StringBuilder tempBuilder,
       Tracer tracer) {
     int createdSpans = 0;
@@ -469,7 +469,7 @@ public class CallTree implements Recyclable {
       TraceContext parentContext,
       Tracer tracer,
       SpanAnchoredClock clock,
-      BiConsumer<SpanBuilder, SpanContext> spanParentOverride,
+      ParentOverrideHandler spanParentOverride,
       StringBuilder tempBuilder) {
 
     Context parentOtelCtx;
@@ -529,7 +529,7 @@ public class CallTree implements Recyclable {
       SpanBuilder span,
       SpanContext parentContext,
       TraceContext nonInferredParent,
-      BiConsumer<SpanBuilder, SpanContext> spanParentOverride,
+      ParentOverrideHandler spanParentOverride,
       StringBuilder tempBuilder) {
     if (childIds == null || childIds.isEmpty()) {
       return;
@@ -546,7 +546,7 @@ public class CallTree implements Recyclable {
                 tempBuilder.toString(),
                 parentContext.getTraceFlags(),
                 parentContext.getTraceState());
-        spanParentOverride.accept(span, childSpanContext);
+        spanParentOverride.setParent(span, childSpanContext);
       }
     }
   }
@@ -879,7 +879,7 @@ public class CallTree implements Recyclable {
     public int spanify(
         SpanAnchoredClock clock,
         Tracer tracer,
-        BiConsumer<SpanBuilder, SpanContext> normalSpanOverride) {
+        ParentOverrideHandler normalSpanOverride) {
       StringBuilder tempBuilder = new StringBuilder();
       int createdSpans = 0;
       List<CallTree> callTrees = getChildren();

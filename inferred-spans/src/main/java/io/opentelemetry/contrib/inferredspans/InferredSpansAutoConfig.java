@@ -6,15 +6,15 @@
 package io.opentelemetry.contrib.inferredspans;
 
 import com.google.auto.service.AutoService;
-import io.opentelemetry.api.trace.SpanBuilder;
-import io.opentelemetry.api.trace.SpanContext;
 import io.opentelemetry.sdk.autoconfigure.spi.AutoConfigurationCustomizer;
 import io.opentelemetry.sdk.autoconfigure.spi.AutoConfigurationCustomizerProvider;
 import io.opentelemetry.sdk.autoconfigure.spi.ConfigProperties;
+import io.opentelemetry.sdk.autoconfigure.spi.internal.ComponentProvider;
+import io.opentelemetry.sdk.autoconfigure.spi.internal.StructuredConfigProperties;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
-import java.util.function.BiConsumer;
+import java.util.ServiceLoader;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -76,14 +76,14 @@ public class InferredSpansAutoConfig implements AutoConfigurationCustomizerProvi
         });
   }
 
-  @SuppressWarnings("unchecked")
-  private static BiConsumer<SpanBuilder, SpanContext> constructParentOverrideHandler(String name) {
-    try {
-      Class<?> clazz = Class.forName(name);
-      return (BiConsumer<SpanBuilder, SpanContext>) clazz.getConstructor().newInstance();
-    } catch (Exception e) {
-      throw new IllegalArgumentException("Could not construct parent override handler", e);
+  private static ParentOverrideHandler constructParentOverrideHandler(String name) {
+    for (ComponentProvider<?> componentProvider : ServiceLoader.load(ComponentProvider.class)) {
+      if (componentProvider.getType().equals(ParentOverrideHandler.class)
+          && componentProvider.getName().equals(name)) {
+        return (ParentOverrideHandler) componentProvider.create(StructuredConfigProperties.empty());
+      }
     }
+    throw new IllegalArgumentException("Could not find parent override handler: " + name);
   }
 
   private static class PropertiesApplier {

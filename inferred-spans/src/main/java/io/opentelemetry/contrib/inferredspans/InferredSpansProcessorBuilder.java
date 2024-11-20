@@ -5,8 +5,6 @@
 
 package io.opentelemetry.contrib.inferredspans;
 
-import io.opentelemetry.api.trace.SpanBuilder;
-import io.opentelemetry.api.trace.SpanContext;
 import io.opentelemetry.contrib.inferredspans.internal.CallTree;
 import io.opentelemetry.contrib.inferredspans.internal.InferredSpansConfiguration;
 import io.opentelemetry.contrib.inferredspans.internal.SpanAnchoredClock;
@@ -14,7 +12,6 @@ import java.io.File;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
-import java.util.function.BiConsumer;
 import javax.annotation.Nullable;
 
 @SuppressWarnings("CanIgnoreReturnValueSuggester")
@@ -52,7 +49,7 @@ public class InferredSpansProcessorBuilder {
 
   @Nullable private File activationEventsFile = null;
   @Nullable private File jfrFile = null;
-  private BiConsumer<SpanBuilder, SpanContext> parentOverrideHandler =
+  private ParentOverrideHandler parentOverrideHandler =
       CallTree.DEFAULT_PARENT_OVERRIDE;
 
   InferredSpansProcessorBuilder() {}
@@ -204,7 +201,7 @@ public class InferredSpansProcessorBuilder {
    * relationship.
    */
   InferredSpansProcessorBuilder parentOverrideHandler(
-      BiConsumer<SpanBuilder, SpanContext> handler) {
+      ParentOverrideHandler handler) {
     this.parentOverrideHandler = handler;
     return this;
   }
